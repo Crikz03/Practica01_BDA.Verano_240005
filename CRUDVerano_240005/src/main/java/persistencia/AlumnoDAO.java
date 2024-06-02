@@ -4,18 +4,14 @@
  */
 package persistencia;
 
-import dtos.AlumnoDTO;
 import entidad.Alumno;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -58,6 +54,59 @@ public class AlumnoDAO implements IAlumnoDAO {
         }
     }
 
+    @Override
+    public void actualizarAlumno(Alumno alumno) throws PersistenciaException {
+        String sentenciaSQL = "UPDATE alumnos SET nombres = ?, apellidoPaterno = ?, apellidoMaterno = ?, activo = ?, eliminado = ? WHERE idAlumno = ?;";
+        try (Connection conexion = this.conexionBD.crearConexion(); PreparedStatement pS = conexion.prepareStatement(sentenciaSQL)) {
+
+            pS.setString(1, alumno.getNombres());
+            pS.setString(2, alumno.getApellidoPaterno());
+            pS.setString(3, alumno.getApellidoMaterno());
+            pS.setBoolean(4, alumno.isActivo());
+            pS.setBoolean(5, alumno.isEliminado());
+            pS.setInt(6, alumno.getIdAlumno());
+
+            pS.executeUpdate();
+        } catch (SQLException e) {
+            throw new PersistenciaException("Error al actualizar el alumno: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void eliminarAlumno(int idAlumno) throws PersistenciaException {
+        String sentenciaSQL = "DELETE FROM alumnos WHERE idAlumno = ?;";
+        try (Connection conexion = this.conexionBD.crearConexion(); PreparedStatement pS = conexion.prepareStatement(sentenciaSQL)) {
+
+            pS.setInt(1, idAlumno);
+            int filasAfectadas = pS.executeUpdate();
+
+            if (filasAfectadas == 0) {
+                throw new PersistenciaException("No se encontró el alumno con ID: " + idAlumno);
+            }
+        } catch (SQLException e) {
+            throw new PersistenciaException("Error al eliminar el alumno: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void AlumnoInactivo(int idAlumno, boolean estado) throws PersistenciaException {
+        String sentenciaSQL = "UPDATE alumnos SET activo = ? WHERE idAlumno = ?;";
+        try (Connection conexion = this.conexionBD.crearConexion(); PreparedStatement pS = conexion.prepareStatement(sentenciaSQL)) {
+
+            pS.setBoolean(1, estado);
+            pS.setInt(2, idAlumno);
+
+            int filasAfectadas = pS.executeUpdate();
+
+            if (filasAfectadas == 0) {
+                throw new PersistenciaException("No se encontró el alumno con ID: " + idAlumno);
+            }
+        } catch (SQLException e) {
+            throw new PersistenciaException("Error al cambiar el estado del alumno: " + e.getMessage());
+        }
+    }
+
+    @Override
     public Alumno buscarAlumnoPorId(int idAlumno) throws PersistenciaException {
         String sentenciaSQL = "SELECT * FROM alumnos WHERE idAlumno = ?;";
         ResultSet res = null;

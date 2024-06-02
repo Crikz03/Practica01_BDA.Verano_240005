@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
+import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 import negocio.IAlumnoNegocio;
@@ -25,7 +26,7 @@ import utilerias.JButtonRenderer;
  * @author Chris
  */
 public class frmCrud extends javax.swing.JFrame {
-    
+
     private int pagina = 1;
     private final int limite = 2;
     private IAlumnoNegocio alumnoNeg;
@@ -35,25 +36,25 @@ public class frmCrud extends javax.swing.JFrame {
      */
     public frmCrud(IAlumnoNegocio alumnoNegocio) {
         initComponents();
-        
+
         this.alumnoNeg = alumnoNegocio;
         this.cargarMetodosIniciales();
     }
-    
+
     private void cargarMetodosIniciales() {
         this.cargarConfiguracionInicialPantalla();
         this.cargarConfiguracionInicialTablaAlumno();
         this.cargarAlumnosEnTabla();
     }
-    
+
     private void cargarConfiguracionInicialPantalla() {
-        
+
     }
-    
+
     private void cargarConfiguracionInicialTablaAlumno() {
         ActionListener onEditarClickListener = new ActionListener() {
             final int columnaId = 0;
-            
+
             @Override
             public void actionPerformed(ActionEvent e) {
                 editar();
@@ -63,54 +64,129 @@ public class frmCrud extends javax.swing.JFrame {
         TableColumnModel modeloColumnas = this.tblAlumnos.getColumnModel();
         modeloColumnas.getColumn(indiceColumnaEditar).setCellRenderer(new JButtonRenderer("Editar"));
         modeloColumnas.getColumn(indiceColumnaEditar).setCellEditor(new JButtonCellEditor("Editar", onEditarClickListener));
-        
+
+        ActionListener onEstatusInactivoClickListener = new ActionListener() {
+            final int columnaId = 0;
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                inactivo();
+            }
+        };
+        int indiceColumnaInactivo = 6;
+        modeloColumnas = this.tblAlumnos.getColumnModel();
+        modeloColumnas.getColumn(indiceColumnaInactivo).setCellRenderer(new JButtonRenderer("Estado"));
+        modeloColumnas.getColumn(indiceColumnaInactivo).setCellEditor(new JButtonCellEditor("Estado", onEstatusInactivoClickListener));
+
         ActionListener onEliminarClickListener = new ActionListener() {
             final int columnald = 0;
-            
+
             @Override
             public void actionPerformed(ActionEvent e) {
                 eliminar();
             }
         };
-        
-        int indiceColumnaEliminar = 6;
+
+        int indiceColumnaEliminar = 7;
         modeloColumnas = this.tblAlumnos.getColumnModel();
         modeloColumnas.getColumn(indiceColumnaEliminar).setCellRenderer(new JButtonRenderer("Eliminar"));
-        
+
         modeloColumnas.getColumn(indiceColumnaEliminar).setCellEditor(new JButtonCellEditor("Eliminar", onEliminarClickListener));
     }
-    
+
     private int getIdSeleccionadoTabla() {
         int indiceFilaSeleccionada = this.tblAlumnos.getSelectedRow();
-        
+
         if (indiceFilaSeleccionada != -1) {
             DefaultTableModel modelo = (DefaultTableModel) this.tblAlumnos.getModel();
             int indiceColumnaId = 0;
             int idSocioSeleccionado = (int) modelo.getValueAt(indiceFilaSeleccionada, indiceColumnaId);
-            
+
             return idSocioSeleccionado;
         } else {
             return 0;
         }
     }
-    
+
     private void editar() {
         int id = this.getIdSeleccionadoTabla();
+
+        try {
+            AlumnoDTO alumno = alumnoNeg.buscarAlumnoPorId(id);
+
+            if (alumno != null) {
+                JTextField nuevoNombre = new JTextField(alumno.getNombres());
+                JTextField nuevoApellidoPaterno = new JTextField(alumno.getApellidoPaterno());
+                JTextField nuevoApellidoMaterno = new JTextField(alumno.getApellidoMaterno());
+
+                Object[] message = {
+                    "Nuevo Nombre:", nuevoNombre,
+                    "Nuevo Apellido Paterno:", nuevoApellidoPaterno,
+                    "Nuevo Apellido Materno:", nuevoApellidoMaterno
+                };
+
+                int option = JOptionPane.showConfirmDialog(this, message, "Editar Alumno", JOptionPane.OK_CANCEL_OPTION);
+
+                if (option == JOptionPane.OK_OPTION) {
+                    alumno.setNombres(nuevoNombre.getText());
+                    alumno.setApellidoPaterno(nuevoApellidoPaterno.getText());
+                    alumno.setApellidoMaterno(nuevoApellidoMaterno.getText());
+
+                    alumnoNeg.actualizarAlumno(alumno);
+                    this.actualizarTabla();
+                    JOptionPane.showMessageDialog(this, "Alumno actualizado exitosamente", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Alumno no encontrado", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (NegocioException | PersistenciaException e) {
+            Logger.getLogger(frmCrud.class.getName()).log(Level.SEVERE, null, e);
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
-    
+
+    private void inactivo() {
+        int id = this.getIdSeleccionadoTabla();
+
+        int confirmacion = JOptionPane.showConfirmDialog(this, "¿Estás seguro de que deseas cambiar el estado del alumno a inactivo?", "Confirmar Cambio de Estado", JOptionPane.YES_NO_OPTION);
+        if (confirmacion == JOptionPane.YES_OPTION) {
+            try {
+                alumnoNeg.AlumnoInactivo(id, false);
+                actualizarTabla();
+                JOptionPane.showMessageDialog(this, "Estado del alumno cambiado a inactivo exitosamente", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            } catch (NegocioException | PersistenciaException e) {
+                Logger.getLogger(frmCrud.class.getName()).log(Level.SEVERE, null, e);
+                JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
     private void eliminar() {
         int id = this.getIdSeleccionadoTabla();
+
+        int confirmacion = JOptionPane.showConfirmDialog(this, "¿Estás seguro de que deseas eliminar al alumno?", "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
+        if (confirmacion == JOptionPane.YES_OPTION) {
+            try {
+                alumnoNeg.eliminarAlumno(id);
+                actualizarTabla();
+                JOptionPane.showMessageDialog(this, "Alumno eliminado exitosamente", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                limpiarCampos();
+            } catch (NegocioException | PersistenciaException e) {
+                Logger.getLogger(frmCrud.class.getName()).log(Level.SEVERE, null, e);
+                JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
-    
+
     private void llenarTablaAlumnos(List<AlumnoDTO> alumnoLista) {
         DefaultTableModel modeloTabla = (DefaultTableModel) this.tblAlumnos.getModel();
-        
+
         if (modeloTabla.getRowCount() > 0) {
             for (int i = modeloTabla.getRowCount() - 1; i > -1; i--) {
                 modeloTabla.removeRow(i);
             }
         }
-        
+
         if (alumnoLista != null) {
             alumnoLista.forEach(row -> {
                 Object[] fila = new Object[5];
@@ -119,12 +195,34 @@ public class frmCrud extends javax.swing.JFrame {
                 fila[2] = row.getApellidoPaterno();
                 fila[3] = row.getApellidoMaterno();
                 fila[4] = row.getEstatus();
-                
+
                 modeloTabla.addRow(fila);
             });
         }
     }
-    
+
+    private void actualizarTabla() {
+        try {
+            List<AlumnoDTO> listaAlumnos = alumnoNeg.buscarAlumnos(limite, pagina);
+            DefaultTableModel model = (DefaultTableModel) this.tblAlumnos.getModel();
+            model.setRowCount(0);
+
+            for (AlumnoDTO alumno : listaAlumnos) {
+                Object[] fila = {
+                    alumno.getIdAlumno(),
+                    alumno.getNombres(),
+                    alumno.getApellidoPaterno(),
+                    alumno.getApellidoMaterno(),
+                    alumno.getEstatus()
+                };
+                model.addRow(fila);
+            }
+        } catch (NegocioException e) {
+            Logger.getLogger(frmCrud.class.getName()).log(Level.SEVERE, null, e);
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void cargarAlumnosEnTabla() {
         try {
             List<AlumnoDTO> alumnos = this.alumnoNeg.buscarAlumnos(this.limite, this.pagina);
@@ -183,17 +281,17 @@ public class frmCrud extends javax.swing.JFrame {
 
         tblAlumnos.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null}
+                {null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null}
             },
             new String [] {
-                "ID", "Nombres", "A. Paterno", "A. Materno", "Estatus", "Editar", "Eliminar"
+                "ID", "Nombres", "A. Paterno", "A. Materno", "Estatus", "Editar", "Estado", "Eliminar"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.Integer.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
+                java.lang.Integer.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
             };
 
             public Class getColumnClass(int columnIndex) {
@@ -297,23 +395,21 @@ public class frmCrud extends javax.swing.JFrame {
 
     private void bRegistroActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bRegistroActionPerformed
         AlumnoDTO alumno = new AlumnoDTO();
-        
+
         alumno.setNombres(txtNombres.getText());
         alumno.setApellidoPaterno(txtApellidoP.getText());
         alumno.setApellidoMaterno(txtApellidoM.getText());
-        
+
         try {
             alumnoNeg.agregaAlumno(alumno);
             JOptionPane.showMessageDialog(null, "Exito al guardar el alumno");
-            txtNombres.setText("");
-            txtApellidoP.setText("");
-            txtApellidoM.setText("");
+            limpiarCampos();
         } catch (NegocioException ex) {
             Logger.getLogger(frmCrud.class.getName()).log(Level.SEVERE, null, ex);
         } catch (PersistenciaException ex) {
             Logger.getLogger(frmCrud.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+
 
     }//GEN-LAST:event_bRegistroActionPerformed
 
@@ -345,4 +441,10 @@ public class frmCrud extends javax.swing.JFrame {
     private javax.swing.JTextField txtApellidoP;
     private javax.swing.JTextField txtNombres;
     // End of variables declaration//GEN-END:variables
+private void limpiarCampos() {
+        txtNombres.setText("");
+        txtApellidoP.setText("");
+        txtApellidoM.setText("");
+    }
+
 }

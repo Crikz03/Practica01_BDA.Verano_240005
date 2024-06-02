@@ -6,9 +6,6 @@ package negocio;
 
 import dtos.AlumnoDTO;
 import entidad.Alumno;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import persistencia.IAlumnoDAO;
@@ -27,20 +24,66 @@ public class AlumnoNegocio implements IAlumnoNegocio {
         this.alumnoDAO = alumnoDAO;
     }
 
+    @Override
     public AlumnoDTO agregaAlumno(AlumnoDTO alumnoDTO) throws NegocioException, PersistenciaException {
         Alumno a = new Alumno();
-        a.setIdAlumno(alumnoDTO.getIdAlumno()); 
+        a.setIdAlumno(alumnoDTO.getIdAlumno());
         a.setNombres(alumnoDTO.getNombres());
         a.setApellidoPaterno(alumnoDTO.getApellidoPaterno());
         a.setApellidoMaterno(alumnoDTO.getApellidoMaterno());
         a.setActivo("activo".equalsIgnoreCase(alumnoDTO.getEstatus()));
 
-        Alumno alumnoGuardado = alumnoDAO.agregar(a); 
+        Alumno alumnoGuardado = alumnoDAO.agregar(a);
 
-        AlumnoDTO alumnoDTOResultante = convertirADTO(alumnoGuardado); 
+        AlumnoDTO alumnoDTOResultante = convertirADTO(alumnoGuardado);
 
         return alumnoDTOResultante;
 
+    }
+
+    @Override
+    public void actualizarAlumno(AlumnoDTO alumnoDTO) throws NegocioException, PersistenciaException {
+        try {
+            Alumno alumno = new Alumno();
+            alumno.setIdAlumno(alumnoDTO.getIdAlumno());
+            alumno.setNombres(alumnoDTO.getNombres());
+            alumno.setApellidoPaterno(alumnoDTO.getApellidoPaterno());
+            alumno.setApellidoMaterno(alumnoDTO.getApellidoMaterno());
+            alumno.setActivo("activo".equalsIgnoreCase(alumnoDTO.getEstatus()));
+            alumno.setEliminado(false);
+
+            alumnoDAO.actualizarAlumno(alumno);
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Error al actualizar el alumno: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void eliminarAlumno(int idAlumno) throws NegocioException, PersistenciaException {
+        try {
+            alumnoDAO.eliminarAlumno(idAlumno);
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Error al eliminar el alumno: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void AlumnoInactivo(int idAlumno, boolean estado) throws NegocioException, PersistenciaException {
+        try {
+            alumnoDAO.AlumnoInactivo(idAlumno, estado);
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Error al cambiar el estado del alumno: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public AlumnoDTO buscarAlumnoPorId(int idAlumno) throws NegocioException, PersistenciaException {
+        try {
+            Alumno alumno = alumnoDAO.buscarAlumnoPorId(idAlumno);
+            return convertirADTO(alumno);
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Error al buscar el alumno por ID: " + e.getMessage());
+        }
     }
 
     private AlumnoDTO convertirADTO(Alumno alumno) throws NegocioException {
