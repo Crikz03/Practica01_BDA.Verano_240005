@@ -28,9 +28,14 @@ public class AlumnoDAO implements IAlumnoDAO {
     @Override
     public Alumno agregar(Alumno alumnoNuevo) throws PersistenciaException {
         String sentenciaSQL = "INSERT INTO `alumnos` (`nombres`,`apellidoPaterno`,`apellidoMaterno`) VALUES (?,?,?);";
+        Connection conexion = null;
+        PreparedStatement pS = null;
+        ResultSet res = null;
+
         try {
-            Connection conexion = this.conexionBD.crearConexion();
-            PreparedStatement pS = conexion.prepareStatement(sentenciaSQL, Statement.RETURN_GENERATED_KEYS);
+            conexion = this.conexionBD.crearConexion();
+            conexion.setAutoCommit(false);
+            pS = conexion.prepareStatement(sentenciaSQL, Statement.RETURN_GENERATED_KEYS);
 
             pS.setString(1, alumnoNuevo.getNombres());
             pS.setString(2, alumnoNuevo.getApellidoPaterno());
@@ -38,7 +43,7 @@ public class AlumnoDAO implements IAlumnoDAO {
 
             pS.executeUpdate();
 
-            ResultSet res = pS.getGeneratedKeys();
+            res = pS.getGeneratedKeys();
 
             int idGenerado = -1;
             if (res.next()) {
@@ -47,10 +52,17 @@ public class AlumnoDAO implements IAlumnoDAO {
             } else {
                 throw new PersistenciaException("No se pudo obtener el ID generado.");
             }
-
+            conexion.commit();
             return alumnoNuevo;
         } catch (SQLException e) {
-            throw new PersistenciaException("No se pudo guardar el cliente.");
+            if (conexion != null) {
+                try {
+                    conexion.rollback();
+                } catch (SQLException ex) {
+                    throw new PersistenciaException("Error al realizar el rollback: " + ex.getMessage());
+                }
+            }
+            throw new PersistenciaException("No se pudo guardar el cliente: " + e.getMessage());
         }
     }
 
